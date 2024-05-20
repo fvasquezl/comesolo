@@ -1,70 +1,31 @@
 class Comesolo:
     def __init__(self):
-        self.tablero = [[0], [0, 0], [0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0, 0]]
+        self.tablero = [x for x in range(1, 16)]
         self.estado = 0
-        self.iniciar_tablero()
 
-    def iniciar_tablero(self):
-        contador = 1
-        self.estado += 1
-        for i in range(len(self.tablero)):
-            for j in range(len(self.tablero[i])):
-                self.tablero[i][j] = contador
-                contador += 1
-        # for fila in self.tablero:
-        #     for elemento in fila:
-        #         elemento = elemento.index+1* len(fila)
-
-    def imprimir_tablero(self):
+    def imprimir_tablero(self) -> None:
         print(f"Estado de tablero: {self.estado}")
-        max_positions = len(self.tablero[-1])
-
-        for fila in self.tablero:
-            espacios_en_blanco = "  " * (max_positions - len(fila))
-            valores_alineados = [str(valor).zfill(2) for valor in fila]
-            print(espacios_en_blanco + "  ".join(valores_alineados))
-
-    def iniciar_juego(self):
-        while True:
-            try:
-                movimiento = int(
-                    input(
-                        "Primera ficha a eliminar para iniciar el juego[1-15], salir[0]:"
-                    )
-                )
-                if movimiento == 0:
-                    break
-                elif movimiento >= 1 and movimiento <= 15:
-                    if self.primer_movimiento(movimiento):
-                        break
-                else:
-                    print("Valor fuera de rango")
-            except ValueError:
-                print("Error en el ingreso de datos")
-
-    def primer_movimiento(self, movimiento):
-        for fila in self.tablero:
-            if movimiento in fila:
-                fila[fila.index(movimiento)] = 0
-                self.estado += 1
-                return True
-        return False
-
-    def verificar_fin_juego(self):
-        contador_fichas = sum(fila.count(0) for fila in self.tablero)
-        if contador_fichas == len(self.tablero) * (len(self.tablero) + 1) // 2 - 1:
-            print("¡Has ganado!")
-            return True
-        return False
+        fila = 1
+        contador = 1
+        print(" " * (5 - fila), end="")
+        for i in range(len(self.tablero)):
+            if i == contador:
+                contador += fila + 1
+                fila += 1
+                print()
+                print(" " * (5 - fila), end="")
+            print(f"{self.tablero[i]:02d}", end="")
+        print()
 
 
 if __name__ == "__main__":
-    tablero = Comesolo()
-    tablero.imprimir_tablero()
-    tablero.iniciar_juego()
-    tablero.imprimir_tablero()
-    if not tablero.verificar_fin_juego():
-        print("El juego continúa...")
+    juego = Comesolo()
+    juego.imprimir_tablero()
+
+    # tablero.iniciar_juego()
+    # tablero.imprimir_tablero()
+    # if not tablero.verificar_fin_juego():
+    #     print("El juego continúa...")
 
 
 """

@@ -3,30 +3,61 @@ class Comesolo:
         self.tablero = [x for x in range(1, 16)]
         self.estado = 0
 
+    def inc_estado(self):
+        self.estado += 1
+
     def imprimir_tablero(self) -> None:
-        print(f"Estado de tablero: {self.estado}")
         fila = 1
         contador = 1
-        print(" " * (5 - fila), end="")
+        print("  " * (5 - fila), end="")
         for i in range(len(self.tablero)):
             if i == contador:
                 contador += fila + 1
                 fila += 1
                 print()
-                print(" " * (5 - fila), end="")
-            print(f"{self.tablero[i]:02d}", end="")
+                print("  " * (5 - fila), end="")
+            print(f"{self.tablero[i]:02d}  ", end="")
+        print(f"\nEstado de tablero: {self.estado}")
         print()
+
+    def primer_movimiento(self, movimiento) -> None:
+        self.inc_estado()
+        self.tablero[self.tablero.index(movimiento)] = 0
+
+    def movimiento_valido(self, origen, destino):
+
+        print(origen, destino)
+        # Verifica que las posiciones sean válidas
+        if not (1 <= origen <= 15 and 1 <= destino <= 15):
+            return False
+
+        # Encuentra la posición intermedia entre origen y destino
+        # ejemplos:
+        #  14 salta 12   14+12 = 26//2 = 13 (intermedia)
+        #  05 salta 12   5+12 = 13//2 = 8 (intermedia)
+
+        intermedia = (origen + destino) // 2
+
+        if self.tablero[intermedia - 1] != 0 and self.tablero[destino - 1] == 0:
+            if (
+                abs(origen - destino) == 4  # Saltos horizontales
+                or abs(origen - destino) == 6  # Saltos diagonales hacia la derecha
+                or abs(origen - destino) == 2  # Saltos diagonales hacia la izquierda
+            ):
+                print(origen, destino, abs(origen - destino))
+                return True
+        return False
+
+    def realizar_movimiento(self, movimiento):
+        pass
 
 
 if __name__ == "__main__":
     juego = Comesolo()
+    # juego.imprimir_tablero()
+    juego.primer_movimiento(13)
     juego.imprimir_tablero()
-
-    # tablero.iniciar_juego()
-    # tablero.imprimir_tablero()
-    # if not tablero.verificar_fin_juego():
-    #     print("El juego continúa...")
-
+    juego.movimiento_valido(6, 13)
 
 """
 Tengo la idea de crear un programa en python 3.12 para resolver el juego llamado "comesolo" en espanol, o 

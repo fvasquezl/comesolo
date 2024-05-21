@@ -1,3 +1,7 @@
+import tensorflow as tf
+import numpy as np
+
+
 class Comesolo:
     def __init__(self):
         self.tablero = [x for x in range(1, 16)]
@@ -16,17 +20,18 @@ class Comesolo:
                 fila += 1
                 print()
                 print("  " * (5 - fila), end="")
-            print(f"{self.tablero[i]:02d}  ", end="")
+            if self.tablero[i] == 0:
+                print(f"\033[33m{self.tablero[i]:02d}  \033[0m", end="")  # Amarillo
+            else:
+                print(f"{self.tablero[i]:02d}  ", end="")
         print(f"\nEstado de tablero: {self.estado}")
-        print()
+        self.inc_estado()
 
     def primer_movimiento(self, movimiento) -> None:
-        self.inc_estado()
         self.tablero[self.tablero.index(movimiento)] = 0
 
     def movimiento_valido(self, origen, destino):
 
-        print(origen, destino)
         # Verifica que las posiciones sean válidas
         if not (1 <= origen <= 15 and 1 <= destino <= 15):
             return False
@@ -37,27 +42,40 @@ class Comesolo:
         #  05 salta 12   5+12 = 13//2 = 8 (intermedia)
 
         intermedia = (origen + destino) // 2
-
-        if self.tablero[intermedia - 1] != 0 and self.tablero[destino - 1] == 0:
-            if (
-                abs(origen - destino) == 4  # Saltos horizontales
-                or abs(origen - destino) == 6  # Saltos diagonales hacia la derecha
-                or abs(origen - destino) == 2  # Saltos diagonales hacia la izquierda
-            ):
-                print(origen, destino, abs(origen - destino))
+        if (
+            self.tablero[origen - 1] != 0
+            and self.tablero[intermedia - 1] != 0
+            and self.tablero[destino - 1] == 0
+        ):
+            if abs(origen - destino) in [2, 3, 5, 7, 9]:  # Saltos
                 return True
         return False
 
     def realizar_movimiento(self, movimiento):
-        pass
+        origen, destino = movimiento
+
+        if not self.movimiento_valido(origen, destino):
+            print("movimiento invalido")
+            return
+        self.tablero[destino - 1] = destino
+        self.tablero[origen - 1] = 0
+        self.tablero[((origen + destino) // 2) - 1] = 0
 
 
 if __name__ == "__main__":
     juego = Comesolo()
-    # juego.imprimir_tablero()
+    juego.imprimir_tablero()
     juego.primer_movimiento(13)
     juego.imprimir_tablero()
-    juego.movimiento_valido(6, 13)
+    juego.realizar_movimiento((6, 13))
+    juego.imprimir_tablero()
+    juego.realizar_movimiento((2, 9))
+    juego.imprimir_tablero()
+    juego.realizar_movimiento((13, 6))
+    juego.imprimir_tablero()
+    juego.realizar_movimiento((4, 13))
+    juego.imprimir_tablero()
+
 
 """
 Tengo la idea de crear un programa en python 3.12 para resolver el juego llamado "comesolo" en espanol, o 

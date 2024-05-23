@@ -65,16 +65,16 @@ class Comesolo:
 if __name__ == "__main__":
     juego = Comesolo()
     juego.imprimir_tablero()
-    juego.primer_movimiento(13)
+    juego.primer_movimiento(11)
     juego.imprimir_tablero()
     juego.realizar_movimiento((6, 13))
-    juego.imprimir_tablero()
-    juego.realizar_movimiento((2, 9))
-    juego.imprimir_tablero()
-    juego.realizar_movimiento((13, 6))
-    juego.imprimir_tablero()
-    juego.realizar_movimiento((4, 13))
-    juego.imprimir_tablero()
+    # juego.imprimir_tablero()
+    # juego.realizar_movimiento((2, 9))
+    # juego.imprimir_tablero()
+    # juego.realizar_movimiento((13, 6))
+    # juego.imprimir_tablero()
+    # juego.realizar_movimiento((4, 13))
+    # juego.imprimir_tablero()
 
 
 """

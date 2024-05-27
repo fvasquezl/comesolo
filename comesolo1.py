@@ -1,12 +1,42 @@
-import tensorflow as tf
 import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
 import random
+
+
+# Definición de la red neuronal
+class RedNeuronalComesolo(nn.Module):
+    def __init__(self, entrada, oculta, salida):
+        super(RedNeuronalComesolo, self).__init__()
+        self.fc1 = nn.Linear(entrada, oculta)
+        self.fc2 = nn.Linear(oculta, 15)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.softmax(
+            self.fc2(x), dim=1
+        )  # Aplica softmax para obtener probabilidades
+        return x
+
+
+# Función para preprocesar el estado del tablero
+def preprocesar_estado(estado_tablero):
+    # Convertir el estado a un tensor
+    tensor_estado = torch.tensor(estado_tablero, dtype=torch.float32)
+    return tensor_estado
 
 
 class Comesolo:
     def __init__(self):
         self.tablero = [1] * 15
         self.estado = 0
+        self.red_neuronal = RedNeuronalComesolo(
+            15, 32, 120
+        )  # Ajustar los tamaños según sea necesario
+        self.red_neuronal.load_state_dict(
+            torch.load("red_neuronal_comesolo.pth"), strict=False
+        )
 
     def inc_estado(self):
         self.estado += 1
@@ -22,9 +52,9 @@ class Comesolo:
                 print()
                 print("  " * (5 - fila), end="")
             if self.tablero[i] == 0:
-                print(f"\033[33m{self.tablero[i]}\033[0m   ", end="")  # Amarillo
+                print(f"\033[33m{self.tablero[i]:1d}  \033[0m ", end="")  # Amarillo
             else:
-                print(f"{self.tablero[i]}   ", end="")
+                print(f"{self.tablero[i]:1d}   ", end="")
         print(f"\nEstado de tablero: {self.estado}")
         self.inc_estado()
 
@@ -32,6 +62,7 @@ class Comesolo:
         self.tablero[movimiento - 1] = 0
 
     def movimiento_valido(self, origen, destino):
+
         # Verifica que las posiciones sean válidas
         if not (1 <= origen <= 15 and 1 <= destino <= 15):
             return False
@@ -51,10 +82,8 @@ class Comesolo:
                 return True
         return False
 
-    def realizar_movimiento(self, movimiento=(0, 0)):
+    def realizar_movimiento(self, movimiento) -> None:
         origen, destino = movimiento
-
-        print(origen, destino)
 
         if not self.movimiento_valido(origen, destino):
             print("movimiento invalido")
@@ -62,6 +91,36 @@ class Comesolo:
         self.tablero[destino - 1] = self.tablero[origen - 1]
         self.tablero[origen - 1] = 0
         self.tablero[((origen + destino) // 2) - 1] = 0
+
+    def obtener_movimiento_optimo(self, estado_tablero):
+        # Preprocesar el estado del tablero
+        print(estado_tablero)
+        tensor_estado = preprocesar_estado(estado_tablero)
+        print(tensor_estado)
+
+        # Obtener la predicción de la red neuronal
+        with torch.no_grad():
+            salida = self.red_neuronal(tensor_estado)
+            print("salida", salida)
+            prediccion = torch.argmax(salida)
+            print("prediccion", prediccion)
+
+        # Decodificar la predicción en las coordenadas de origen y destino
+        origen = prediccion // 15 + 1
+        destino = prediccion % 15 + 1
+
+        return origen, destino
+
+        # Función de recompensa
+
+    def recompensa(self, tablero, fichas_IA):
+        """Devuelve la recompensa para el agente."""
+        if tablero.count(0) == 0:  # Si el agente ganó
+            return 10  # Alta recompensa por ganar
+        elif tablero.count(0) == 1:  # Si el agente perdió
+            return -5  # Alta penalización por perder
+        else:
+            return fichas_IA  # Recompensa por cada ficha que la IA elimine
 
     def estado_a_vector(self):
         """Convierte el tablero del juego a un vector numérico."""
@@ -82,132 +141,117 @@ class Comesolo:
                     movimientos.append((origen, destino))
         return movimientos
 
-    def juega_movimiento_aleatorio(self):
-        """Juega un movimiento aleatorio válido."""
-        movimientos = self.movimientos_posibles()
-        if movimientos:
-            movimiento = random.choice(movimientos)
-            self.realizar_movimiento(movimiento)
+    # Función para entrenar el modelo
+    def entrenar(self, num_iteraciones, tasa_aprendizaje=0.001):
+        """Entrena la red neuronal para resolver el juego."""
+        optimizador = optim.Adam(self.red_neuronal.parameters(), lr=tasa_aprendizaje)
+        criterio = nn.CrossEntropyLoss()
 
+        for i in range(num_iteraciones):
+            estado = self.estado_a_vector()
 
-# Define la función de recompensa
-def recompensa(tablero, fichas_IA):
-    """Devuelve la recompensa para el agente."""
-    if tablero.count(0) == 0:  # Si el agente ganó
-        return 1
-    elif tablero.count(0) == 1:  # Si el agente perdió
-        return -1
-    else:
-        return 0
+            # Movimiento inicial del jugador (simulando al jugador)
+            movimiento_humano = random.randint(1, 15)
+            self.primer_movimiento(movimiento=movimiento_humano)
+            estado = self.estado_a_vector()
+            fichas_IA = self.tablero.count(0)
 
+            while True:
+                # Obtener la predicción de la red neuronal
+                # probabilidades = self.red_neuronal(np.expand_dims(estado, axis=0))
+                probabilidades = self.red_neuronal(
+                    torch.tensor(estado, dtype=torch.float32)
+                )
 
-# Crea la red neuronal
+                movimientos_posibles = self.movimientos_posibles()
 
-modelo = tf.keras.Sequential(
-    [
-        tf.keras.layers.Dense(128, activation="relu", input_shape=(15,)),
-        tf.keras.layers.Dense(15, activation="softmax"),
-    ]
-)
-
-# Compila el modelo
-modelo.compile(optimizer="adam", loss="categorical_crossentropy", metrics=["accuracy"])
-
-
-# Función para entrenar el modelo
-def entrenar(modelo, num_iteraciones):
-
-    for i in range(num_iteraciones):
-        juego = Comesolo()
-        estado = juego.estado_a_vector()
-
-        # Movimiento inicial del jugador (simulando al jugador)
-        primer_movimiento = random.randint(1, 15)
-        juego.primer_movimiento(primer_movimiento)
-
-        origen = random.randint(1, 15)
-        destino = random.randint(1, 15)
-        juego.realizar_movimiento((origen, destino))
-        estado = juego.estado_a_vector()
-        fichas_IA = juego.tablero.count(0)
-
-        while True:
-            # Obtiene las probabilidades de las acciones del modelo
-            probabilidades = modelo(np.expand_dims(estado, axis=0))
-
-            # Selecciona una acción (con la mayor probabilidad)
-            accion = np.argmax(probabilidades)
-
-            # Encuentra el movimiento válido
-            movimientos = juego.movimientos_posibles()
-            if movimientos:
-                for movimiento in movimientos:
-                    if movimiento[0] == accion + 1:
-                        juego.realizar_movimiento(movimiento)
+                epsilon = 0.1
+                if random.random() < epsilon:
+                    # Elige un movimiento aleatorio válido
+                    if movimientos_posibles:  # Verifica si hay movimientos disponibles
+                        accion = random.choice(movimientos_posibles)
+                    else:
+                        # No hay movimientos posibles, la IA no puede jugar
                         break
+                else:
+                    # Seleccionar una acción (con la mayor probabilidad)
+                    accion = np.argmax(probabilidades.detach().numpy())
 
-            # Calcula la recompensa
-            recompensa_actual = recompensa(juego.tablero, fichas_IA)
+                # Encuentra el movimiento válido
+                # movimientos = self.movimientos_posibles()
+                if movimientos_posibles:
+                    movimiento_elegido = movimientos_posibles[
+                        accion
+                    ]  # Obtiene el movimiento de la lista
+                    origen, destino = movimiento_elegido  # Desempaqueta la tupla
+                    self.realizar_movimiento(movimiento_elegido)
+                    break
 
-            # Actualiza el modelo (proceso de aprendizaje)
-            # Convierte la acción en un vector one-hot
-            target = np.zeros(15)
-            target[accion] = 1
-            modelo.fit(
-                np.expand_dims(estado, axis=0),
-                np.expand_dims(target, axis=0),
-                epochs=1,
-                verbose=0,
+                # Calcular la recompensa
+                recompensa_actual = self.recompensa(self.tablero, fichas_IA)
+
+                self.red_neuronal.zero_grad()
+                prediccion = self.red_neuronal(
+                    torch.tensor(estado, dtype=torch.float32)
+                )
+                loss = criterio(prediccion, torch.tensor([accion], dtype=torch.float))
+                loss.backward()
+                optimizador.step()
+
+                # Si la partida termina, sale del bucle
+                if recompensa_actual != 0:
+                    break
+
+                # Actualiza el estado del juego
+                estado = self.estado_a_vector()
+                fichas_IA = self.tablero.count(0)
+
+            # Imprime el progreso del entrenamiento (opcional)
+            print(f"Iteración {i+1}")
+
+        # Guardar los pesos entrenados
+        torch.save(self.red_neuronal.state_dict(), "red_neuronal_comesolo.pth")
+
+    # agregado por claude
+    def jugar(self):
+        while True:
+            self.tablero = [1] * 15
+            self.imprimir_tablero()
+            primer_movimiento = int(
+                input(
+                    "Ingresa el índice de la ficha a eliminar para iniciar el juego (1-15): "
+                )
             )
+            self.primer_movimiento(movimiento=primer_movimiento)
+            self.imprimir_tablero()
 
-            # Si la partida termina, sale del bucle
-            if recompensa_actual != 0:
+            # # Carga la red neuronal desde el archivo .pth
+            # self.red_neuronal = RedNeuronalComesolo(15, 32, 120)  # Crea la red neuronal
+            # self.red_neuronal.load_state_dict(
+            #     torch.load("red_neuronal_comesolo.pth")
+            # )  # Carga los pesos
+
+            while not self.verificar_fin_juego():
+                origen_optimo, destino_optimo = self.obtener_movimiento_optimo(
+                    self.tablero
+                )
+
+                self.realizar_movimiento((origen_optimo, destino_optimo))
+                self.imprimir_tablero()
+
+            print("¡Has ganado!")
+
+            # Pregunta si el usuario quiere jugar otra ronda
+            jugar_otra_vez = input("¿Quieres jugar otra ronda? (s/n): ")
+            if jugar_otra_vez.lower() != "s":
                 break
 
-            # Actualiza el estado del juego
-            estado = juego.estado_a_vector()
-            fichas_IA = juego.tablero.count(0)
-
-        # Imprime el progreso del entrenamiento (opcional)
-        print(f"Iteración {i+1}")
-
-
-# Función para tomar una decisión (usando el modelo entrenado)
-def tomar_decision(modelo, estado):
-    """Utiliza el modelo para predecir el mejor movimiento."""
-    probabilidades = modelo(np.expand_dims(estado, axis=0))
-    mejor_movimiento = (
-        np.argmax(probabilidades) + 1
-    )  # +1 para convertir el índice a la posición del tablero
-    return mejor_movimiento
+    def verificar_fin_juego(self):
+        fichas_restantes = sum(1 for ficha in self.tablero if ficha != 0)
+        return fichas_restantes == 1
 
 
 if __name__ == "__main__":
     juego = Comesolo()
-
-    # Entrena el modelo
-    entrenar(modelo, 1000)  # Entrena durante 1000 iteraciones
-
-    # Simula el primer movimiento del jugador
-    primer_movimiento = int(
-        input("Ingresa el número de la posición del primer movimiento: ")
-    )
-    juego.primer_movimiento(primer_movimiento)
-
-    while True:
-        juego.imprimir_tablero()
-
-        if juego.movimientos_posibles():
-            # Movimiento de la IA
-            origen = 11  # Puedes cambiarlo por una variable
-            destino = tomar_decision(modelo, juego.estado_a_vector(), origen)
-            if destino:
-                juego.realizar_movimiento((origen, destino))
-        else:
-            print("La IA no puede hacer un movimiento.")
-            break
-
-        if juego.tablero.count(0) == 0 or juego.tablero.count(0) == 1:
-            break
-
-    juego.imprimir_tablero()
+    juego.entrenar(1000)
+    juego.jugar()

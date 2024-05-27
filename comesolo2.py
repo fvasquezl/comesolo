@@ -1,37 +1,76 @@
+from termcolor import colored
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+
+# Definir la arquitectura de la red neuronal
+class ComeSoloNet(nn.Module):
+    def __init__(self):
+        super(ComeSoloNet, self).__init__()
+        self.fc1 = nn.Linear(25, 64)  # Entrada de 5x5 (tamaño del tablero)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 15)  # Salida de 15 movimientos posibles
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+
+# Función para predecir el mejor movimiento
+def predecir_movimiento(tablero):
+    # Preprocesar el tablero a formato de tensor
+    print(tablero)
+    tablero_tensor = torch.FloatTensor(tablero).view(1, -1)
+
+    # Cargar la red neuronal entrenada
+    modelo = ComeSoloNet()
+    modelo.load_state_dict(torch.load("modelo_entrenado.pth"))
+
+    # Hacer la predicción
+    with torch.no_grad():
+        salida = modelo(tablero_tensor)
+        _, prediccion = torch.max(salida, 1)
+        mejor_movimiento = prediccion.item() + 1  # Ajustar el índice de movimiento
+
+    return mejor_movimiento
+
+
 class Comesolo:
     def __init__(self):
-        self.tablero = [[1], [2, 3], [4, 5, 6], [7, 8, 9, 10], [11, 12, 13, 14, 15]]
+        self.tablero = self.ini_tablero()
         self.estado = 0
 
     def inc_estado(self):
         self.estado += 1
 
+    def ini_tablero(self):
+        self.tablero = [[1] * x for x in range(1, 6)]
+
     def imprimir_tablero(self) -> None:
-        """
-        Imprime el estado actual del tablero de manera formateada.
-        """
         print(f"Estado de tablero: {self.estado}")
         for fila in self.tablero:
-            print(" " * (5 - len(fila)), end="")
+            fila_str = []
             for valor in fila:
                 if valor == 0:
-                    print(f"\033[33m{valor:1d} \033[0m ", end="")  # Amarillo
+                    fila_str.append(colored(str(valor), "yellow"))
                 else:
-                    print(f"{valor:1d} ", end="")
-            print()
+                    fila_str.append(str(valor))
+            print("  " * (5 - len(fila)) + "   ".join(fila_str))
         self.inc_estado()
 
-    def movimiento_valido(self, origen, destino):
-        """
-        Verifica si un movimiento es válido según las reglas del juego.
+    def primer_movimiento(self, movimiento: int) -> None:
+        # Verifica que las posiciones sean válidas
+        if not (1 <= movimiento <= 15):
+            print("movimiento invalido")
+            return False
+        else:
+            c_origen, c_destino = self.obtener_coordenadas(movimiento)
+            self.tablero[c_origen][c_destino] = 0
 
-        Args:
-            origen (int): Índice de la ficha de origen (empezando desde 1).
-            destino (int): Índice de la posición de destino (empezando desde 1).
-
-        Returns:
-            bool: True si el movimiento es válido, False en caso contrario.
-        """
+    def movimiento_valido(self, origen: int, destino: int):
         # Verifica que las posiciones sean válidas
         if not (1 <= origen <= 15 and 1 <= destino <= 15):
             return False
@@ -58,29 +97,18 @@ class Comesolo:
 
         return False
 
-    def obtener_coordenadas(self, indice):
-        """
-        Obtiene las coordenadas de fila y columna a partir del índice de una ficha.
+    def obtener_coordenadas(self, indice: int):
+        if not (1 <= indice <= sum(range(1, len(self.tablero) + 1))):
+            raise ValueError("Índice fuera de rango")
 
-        Args:
-            indice (int): Índice de la ficha (empezando desde 1).
-
-        Returns:
-            tuple: Tupla con las coordenadas de fila y columna.
-        """
         for fila in range(len(self.tablero)):
-            for col in range(len(self.tablero[fila])):
-                if self.tablero[fila][col] == indice:
-                    return fila, col
+            inicio = sum(range(fila + 1))
+            fin = inicio + len(self.tablero[fila])
+            if inicio < indice <= fin:
+                col = indice - inicio
+                return fila, col - 1
 
     def realizar_movimiento(self, origen, destino) -> None:
-        """
-        Realiza un movimiento válido en el tablero.
-
-        Args:
-            origen (int): Índice de la ficha de origen (empezando desde 1).
-            destino (int): Índice de la posición de destino (empezando desde 1).
-        """
         if self.movimiento_valido(origen, destino):
             fila_origen, col_origen = self.obtener_coordenadas(origen)
             fila_destino, col_destino = self.obtener_coordenadas(destino)
@@ -95,40 +123,34 @@ class Comesolo:
         else:
             print("Movimiento inválido")
 
-    def jugar(self):
-        """
-        Inicia el juego y permite al usuario realizar el primer movimiento.
-        """
-        self.imprimir_tablero()
-        primer_movimiento = int(
-            input(
-                "Ingresa el índice de la ficha a eliminar para iniciar el juego (1-15): "
-            )
-        )
-        origen, destino = self.obtener_coordenadas(primer_movimiento)
-        self.tablero[origen][destino] = 0
-        self.imprimir_tablero()
-
-        # Aquí debes implementar la lógica de la IA para resolver el juego
-        while not self.verificar_fin_juego():
-            # Obtener el siguiente movimiento óptimo utilizando tu algoritmo de IA
-            origen_optimo, destino_optimo = obtener_movimiento_optimo(self.tablero)
-            self.realizar_movimiento(origen_optimo, destino_optimo)
-            self.imprimir_tablero()
-
-        print("¡Has ganado!")
-
-    def verificar_fin_juego(self):
-        """
-        Verifica si el juego ha terminado (solo queda una ficha en el tablero).
-
-        Returns:
-            bool: True si el juego ha terminado, False en caso contrario.
-        """
-        fichas_restantes = sum(fila.count(0) for fila in self.tablero)
-        return fichas_restantes == len(self.tablero) * (len(self.tablero) + 1) // 2 - 1
+    # Modificar el método realizar_movimiento_ia
+    def realizar_movimiento_ia(self):
+        tablero_actual = self.tablero.copy()  # Obtener una copia del tablero actual
+        mejor_movimiento = predecir_movimiento(tablero_actual)
+        self.realizar_movimiento(mejor_movimiento)
 
 
 if __name__ == "__main__":
     juego = Comesolo()
-    juego.jugar()
+    juego.ini_tablero()
+    juego.imprimir_tablero()
+    movimiento_inicial = int(input("Ingrese su movimiento inicial (1-15): "))
+    juego.primer_movimiento(movimiento_inicial)
+    juego.imprimir_tablero()
+
+    while True:
+        juego.realizar_movimiento_ia()
+        juego.imprimir_tablero()
+        movimientos_validos = juego.obtener_movimientos_validos()
+        if not movimientos_validos:
+            break
+
+    print("Juego terminado.")
+
+"""
+Este juego  es muy sencillo, se inicia con un movimiento, que lo hace el usuario, en este caso
+ ejecutando el metodo primer_movimiento(movimiento), lo cual remueve una ficha del tablero, 
+ y apartir de ahi la IA debe hacerse cargo, moviendo una ficha, saltando una ficha intermedia 
+ y aterrizando en la posicion vacia, volver a repetir el movimento hasta que el tablero quede con 
+ una sola ficha que es la solucion ideal 
+"""

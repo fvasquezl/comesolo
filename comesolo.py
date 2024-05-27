@@ -25,36 +25,41 @@ def preprocesar_estado(estado_tablero):
 
 class Comesolo:
     def __init__(self):
-        self.tablero = [1] * 15
+        self.tablero = [0] * 15
         self.estado = 0
-        self.red_neuronal = RedNeuronalComesolo(
-            15, 32, 120
-        )  # Ajustar los tamaños según sea necesario
-        self.red_neuronal.load_state_dict(
-            torch.load("red_neuronal_comesolo.pth")
-        )  # Cargar los pesos entrenados
+        # self.red_neuronal = RedNeuronalComesolo(
+        #     15, 32, 120
+        # )  # Ajustar los tamaños según sea necesario
+        # self.red_neuronal.load_state_dict(
+        #     torch.load("red_neuronal_comesolo.pth")
+        # )  # Cargar los pesos entrenados
 
     def inc_estado(self):
         self.estado += 1
 
     def imprimir_tablero(self) -> None:
-        fila = 1
-        contador = 1
-        print("  " * (5 - fila), end="")
-        for i in range(len(self.tablero)):
-            if i == contador:
-                contador += fila + 1
-                fila += 1
-                print()
-                print("  " * (5 - fila), end="")
-            if self.tablero[i] == 0:
-                print(f"\033[33m{self.tablero[i]:1d}  \033[0m ", end="")  # Amarillo
-            else:
-                print(f"{self.tablero[i]:1d}   ", end="")
-        print(f"\nEstado de tablero: {self.estado}")
+        for i in range(5):
+            inicio = i * (i + 1) // 2
+            fin = inicio + i + 1
+            fila = self.tablero[inicio:fin]
+            fila_str = []
+            for valor in fila:
+                if valor == 0:
+                    fila_str.append(f"\033[33m{valor}\033[0m")  # Color amarillo
+                else:
+                    fila_str.append(str(valor))
+            print(" " * (4 - i) + " ".join(fila_str))
+
         self.inc_estado()
 
-    def primer_movimiento(self, movimiento) -> None:
+    def iniciar_tablero(self) -> None:
+        self.tablero = [1] * 15
+
+    def primer_movimiento(self, movimiento: int) -> None:
+        if not (1 <= movimiento <= 15):
+            print("Posición inválida")
+            return
+
         self.tablero[movimiento - 1] = 0
 
     def movimiento_valido(self, origen, destino):
@@ -128,7 +133,14 @@ class Comesolo:
 
 if __name__ == "__main__":
     juego = Comesolo()
-    juego.jugar()
+    juego.imprimir_tablero()
+    juego.iniciar_tablero()
+    juego.imprimir_tablero()
+    juego.primer_movimiento(6)
+    juego.imprimir_tablero()
+
+    print(juego.tablero)
+    # juego.jugar()
 
 
 """
@@ -206,8 +218,8 @@ if __name__ == "__main__":
 el cual contiene los siguientes metodos:
 primer_movimiento(movimiento) el cual es el unico movimiento que realiza el usuario, por ejemplo eliminar la ficha en la
 posicion 13
-        1   
-      1   1   
+        0   
+      0   1   
     1   1   1   
   1   1   1   1   
 1   1   0   1   1 
@@ -220,13 +232,13 @@ y se deben realizar todos lo movimientos necesarios que permita terminar el tabl
 y dejarlo solo con un movimiento:
 el cual puede ser algo como lo que se muestra acontinuacion, no es la solucion, pero es algo asi lo que 
 se espera como solucion ideal.
-         0
-       1   0
-     0   0   0
-   0   0   0   0
- 0   0   0   0   0
+         1
+       2   3
+     4   5   6
+   7   8   9   10
+ 11  12   13  14  15
 
-
+1,2,4,7,11
 
 
 

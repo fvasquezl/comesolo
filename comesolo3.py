@@ -50,6 +50,8 @@ def entrenar_modelo(
     for _ in range(num_datos):
         juego = Comesolo()
         juego.ini_tablero()
+        movimiento_humano = random.randint(1, 15)
+        juego.primer_movimiento(movimiento=movimiento_humano)
         tablero_inicial = juego.tablero.copy()
         movimientos = []
         while True:
@@ -59,6 +61,7 @@ def entrenar_modelo(
             origen, destino = random.choice(movimientos_validos)
             movimientos.append((origen, destino))
             juego.realizar_movimiento(origen, destino)
+            juego.imprimir_tablero()
         X_train.append(tablero_inicial)
         y_train.extend(movimientos)
 

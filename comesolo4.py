@@ -6,7 +6,6 @@ import torch.optim as optim
 import random
 
 
-# Definir la arquitectura de la red neuronal
 class ComeSoloNet(nn.Module):
     def __init__(self):
         super(ComeSoloNet, self).__init__()
@@ -38,41 +37,11 @@ def predecir_movimiento(tablero):
         # Obtener el índice del movimiento más probable
 
     # Encuentra el origen y el destino del movimiento
-    movimiento_mas_cercano = encontrar_movimiento_mas_cercano(tablero, mejor_movimiento)
-    return movimiento_mas_cercano
+    origen, destino = buscar_origen_destino(mejor_movimiento)
+
+    return origen, destino
 
 
-def buscar_origen_destino(movimiento):
-    # Encuentra el origen y el destino del movimiento
-    for origen in range(1, 16):
-        for destino in range(1, 16):
-            if juego.movimiento_valido(origen, destino) and destino == movimiento:
-                return origen, destino
-    return 0, 0
-
-
-def encontrar_movimiento_mas_cercano(tablero, mejor_movimiento):
-
-    movimientos_validos = juego.obtener_movimientos_validos()
-    distancia_minima = float("inf")
-    movimiento_mas_cercano = (0, 0)
-
-    for movimiento in movimientos_validos:
-        distancia = abs(
-            movimiento[1] - 1 - mejor_movimiento
-        )  # Calcula la distancia entre el movimiento y la predicción
-        if distancia < distancia_minima:
-            distancia_minima = distancia
-            movimiento_mas_cercano = movimiento
-
-    if movimiento_mas_cercano == (0, 0):  # Si no se encuentra un movimiento válido
-        print("No se encontraron movimientos válidos.")  # Mostrar un mensaje de error
-        return (0, 0)  # Devolver un valor por defecto o lanzar una excepción
-
-    return movimiento_mas_cercano
-
-
-# Función para entrenar el modelo
 def entrenar_modelo(
     num_datos=10000, num_epochs=100, lr=0.01, ruta_guardado="modelo_entrenado.pth"
 ):
@@ -112,7 +81,6 @@ def entrenar_modelo(
         for i, (X_batch, y_batch) in enumerate(zip(X_train, y_train)):
             # Hacer una pasada hacia adelante
             salidas = modelo(X_batch)
-            y_batch = y_batch.unsqueeze(1)  # Ajustar la forma del tensor y_batch
             perdida = criterio(salidas, y_batch)
 
             # Retropropagación y optimización
@@ -162,27 +130,19 @@ class Comesolo:
         else:
             self.tablero[movimiento - 1] = 0
 
-    def movimiento_valido(self, origen: int, destino: int):
+    def movimiento_valido(self, destino: int, origen: int):
         # Verifica que las posiciones sean válidas
-        if not (1 <= origen <= 15 and 1 <= destino <= 15):
+        if not (1 <= destino <= 15 and 1 <= origen <= 15):
             return False
-        # Encuentra la posición intermedia entre origen y destino
-        intermedia = (origen + destino) // 2
+        # Encuentra la posición intermedia entre destino y origen
+        intermedia = (destino + origen) // 2
 
-        # Verifica que el origen y la posición intermedia estén ocupados, y el destino esté vacío
+        # Verifica que el destino y la posición intermedia estén ocupados, y el origen esté vacío
         if (
-            self.tablero[origen - 1] != 0
+            self.tablero[destino - 1] == 0
             and self.tablero[intermedia - 1] != 0
-            and self.tablero[destino - 1] == 0
+            and self.tablero[origen - 1] != 0
         ):
-            # # Verifica que el salto sea válido según las reglas del juego
-            # if abs(origen - destino) in [2, 3, 5, 7, 9]:  # Saltos
-            #     return True
-            # long_nodes = [3, 4, 5, 12, 13, 14]
-            # if origen in long_nodes or destino in long_nodes:
-            #     distance = [2, 3, 5, 7, 9]
-            # else:
-            #     distance = [2, 3, 5, 7]
             reglas = {
                 1: [4, 6],
                 2: [7, 9],
@@ -202,13 +162,13 @@ class Comesolo:
             }
 
             if destino in reglas.keys():
-                if abs(origen - destino) in reglas[destino]:
+                if origen in reglas[destino]:
                     return True
         return False
 
     def realizar_movimiento(self, origen, destino) -> None:
         print(origen, destino)
-        if not self.movimiento_valido(origen, destino):
+        if not self.movimiento_valido(destino, origen):
             print("Movimiento fuera de rango")
             return
         else:
@@ -219,20 +179,11 @@ class Comesolo:
             self.tablero[origen - 1] = 0
             self.tablero[intermedia - 1] = 0
 
-    # Modificar el método realizar_movimiento_ia
-    def realizar_movimiento_ia(self):
-        # tablero_actual = self.tablero.copy()  # Obtener una copia del tablero actual
-        # mejor_movimiento = predecir_movimiento(tablero_actual)
-        # print(mejor_movimiento)
-        # self.realizar_movimiento(mejor_movimiento)
-        origen, destino = predecir_movimiento(self.tablero)
-        self.realizar_movimiento(origen, destino)
-
     def obtener_movimientos_validos(self):
         movimientos_validos = []
-        for origen in range(1, 16):
-            for destino in range(1, 16):
-                if self.movimiento_valido(origen, destino):
+        for destino in range(1, 16):
+            for origen in range(1, 16):
+                if self.movimiento_valido(destino, origen):
                     movimientos_validos.append((origen, destino))
         return movimientos_validos
 
@@ -243,7 +194,6 @@ class Comesolo:
         juego.imprimir_tablero()
 
         while True:
-            juego.realizar_movimiento_ia()
             juego.imprimir_tablero()
             movimientos_validos = juego.obtener_movimientos_validos()
             if not movimientos_validos:
@@ -253,7 +203,6 @@ class Comesolo:
 
 
 if __name__ == "__main__":
-    # entrenar el modelo
     entrenar_modelo()
 
     # Jugar el juego

@@ -38,9 +38,8 @@ def predecir_movimiento(tablero):
         # Obtener el índice del movimiento más probable
 
     # Encuentra el origen y el destino del movimiento
-    origen, destino = buscar_origen_destino(mejor_movimiento)
-
-    return origen, destino
+    movimiento_mas_cercano = encontrar_movimiento_mas_cercano(tablero, mejor_movimiento)
+    return movimiento_mas_cercano
 
 
 def buscar_origen_destino(movimiento):
@@ -50,6 +49,27 @@ def buscar_origen_destino(movimiento):
             if juego.movimiento_valido(origen, destino) and destino == movimiento:
                 return origen, destino
     return 0, 0
+
+
+def encontrar_movimiento_mas_cercano(tablero, mejor_movimiento):
+
+    movimientos_validos = juego.obtener_movimientos_validos()
+    distancia_minima = float("inf")
+    movimiento_mas_cercano = (0, 0)
+
+    for movimiento in movimientos_validos:
+        distancia = abs(
+            movimiento[1] - 1 - mejor_movimiento
+        )  # Calcula la distancia entre el movimiento y la predicción
+        if distancia < distancia_minima:
+            distancia_minima = distancia
+            movimiento_mas_cercano = movimiento
+
+    if movimiento_mas_cercano == (0, 0):  # Si no se encuentra un movimiento válido
+        print("No se encontraron movimientos válidos.")  # Mostrar un mensaje de error
+        return (0, 0)  # Devolver un valor por defecto o lanzar una excepción
+
+    return movimiento_mas_cercano
 
 
 # Función para entrenar el modelo
@@ -80,8 +100,10 @@ def entrenar_modelo(
         y_train.extend([movimiento - 1 for movimiento in movimientos])  # Corrección
 
     # Convertir los datos de entrenamiento a tensores
-    X_train = [torch.FloatTensor(x) for x in X_train]
-    y_train = torch.LongTensor(y_train)  # Ajustar índices de movimientos
+    # X_train = [torch.FloatTensor(x) for x in X_train]
+    # y_train = torch.LongTensor(y_train)  # Ajustar índices de movimientos
+    X_train = torch.FloatTensor(X_train)
+    y_train = torch.LongTensor(y_train)
 
     # Instanciar la red, la función de pérdida y el optimizador
     modelo = ComeSoloNet()
@@ -159,6 +181,27 @@ class Comesolo:
             # Verifica que el salto sea válido según las reglas del juego
             if abs(origen - destino) in [2, 3, 5, 7, 9]:  # Saltos
                 return True
+            long_nodes = [3, 4, 5, 12, 13, 14]
+            if origen in long_nodes or destino in long_nodes:
+                distance = [2, 3, 5, 7, 9]
+            else:
+                distance = [2, 3, 5, 7]
+            1 = [3,5]
+            2 = [5,7]
+            3 = [5,7]
+            4 =[3,2,7,9]
+            5 =[7,9]
+            6=[5,2,7,9]
+            7=[5,2]
+            8=[5,2]
+            9=[7,2]
+            10=[7,2]
+            11=[7,2]
+            12=[7,2]
+            13=[2,2,7,9]
+            14=[9,2]
+            15=[9,2]
+
 
         return False
 

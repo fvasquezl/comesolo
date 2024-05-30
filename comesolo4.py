@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 
+import csv
+
 import random
 
 
@@ -68,11 +70,11 @@ def entrenar_modelo(
     for _ in range(num_datos):
         juego = Comesolo()
         juego.ini_tablero()
+        movimiento_inicial = random.randint(1, 15)
+        juego.primer_movimiento(movimiento_inicial)
         tablero_inicial = juego.tablero.copy()
         movimientos = []
         while True:
-            movimiento_inicial = random.randint(1, 15)
-            juego.primer_movimiento(movimiento_inicial)
             movimientos_validos = juego.obtener_movimientos_validos()
             if not movimientos_validos:
                 break
@@ -84,12 +86,11 @@ def entrenar_modelo(
 
         y_train.extend([movimiento - 1 for movimiento in movimientos])  # Corrección
 
-    f = open("tablero.txt", "a")
-    f.write(X_train)
-    f.close
-    f = open("movimiento.txt", "a")
-    f.write(y_train)
-    f.close
+    # with open("tablero.txt", "w") as f:
+    #     csv.writer(f, delimiter=",").writerows(X_train)
+
+    # with open("movimiento.txt", "w") as f:
+    #     csv.writer(f, delimiter=",").writerows(y_train)
 
     # Convertir los datos de entrenamiento a tensores
     # X_train = [torch.FloatTensor(x) for x in X_train]

@@ -21,7 +21,7 @@ class ComeSoloNet(nn.Module):
 
 
 # Función para predecir el mejor movimiento
-def predecir_movimiento(tablero):
+def predecir_movimiento(tablero, epsilon=0.1):
     # Preprocesar el tablero a formato de tensor
     tablero_tensor = torch.FloatTensor(tablero).view(1, 15)
 
@@ -33,13 +33,30 @@ def predecir_movimiento(tablero):
     # Hacer la predicción
     with torch.no_grad():
         salida = modelo(tablero_tensor)
-        mejor_movimiento = torch.argmax(salida).item()
+        mejor_movimiento_predicho = torch.argmax(salida).item()
         # Obtener el índice del movimiento más probable
+
+    # Exploración Epsilon-Greedy
+    if random.random() < epsilon:
+        # Exploración: seleccionar un movimiento aleatorio
+        mejor_movimiento = random.randint(0, 14)
+    else:
+        # Explotación: seleccionar el mejor movimiento predicho
+        mejor_movimiento = mejor_movimiento_predicho
 
     # Encuentra el origen y el destino del movimiento
     origen, destino = buscar_origen_destino(mejor_movimiento)
 
     return origen, destino
+
+
+def buscar_origen_destino(movimiento):
+    # Encuentra el origen y el destino del movimiento
+    for origen in range(1, 16):
+        for destino in range(1, 16):
+            if juego.movimiento_valido(destino, origen) and destino == movimiento:
+                return origen, destino
+    return 0, 0
 
 
 def entrenar_modelo(
@@ -62,8 +79,17 @@ def entrenar_modelo(
             origen, destino = random.choice(movimientos_validos)
             movimientos.append(origen)
             juego.realizar_movimiento(origen, destino)
+
         X_train.append(tablero_inicial)
+
         y_train.extend([movimiento - 1 for movimiento in movimientos])  # Corrección
+
+    f = open("tablero.txt", "a")
+    f.write(X_train)
+    f.close
+    f = open("movimiento.txt", "a")
+    f.write(y_train)
+    f.close
 
     # Convertir los datos de entrenamiento a tensores
     # X_train = [torch.FloatTensor(x) for x in X_train]
@@ -187,6 +213,14 @@ class Comesolo:
                     movimientos_validos.append((origen, destino))
         return movimientos_validos
 
+    def realizar_movimiento_ia(self):
+        tablero_actual = self.tablero.copy()  # Obtener una copia del tablero actual
+        # mejor_movimiento = predecir_movimiento(tablero_actual)
+        # print(mejor_movimiento)
+        # self.realizar_movimiento(mejor_movimiento)
+        origen, destino = predecir_movimiento(tablero_actual)
+        self.realizar_movimiento(origen, destino)
+
     def jugar(self):
         juego.ini_tablero()
         movimiento_inicial = int(input("Ingrese su movimiento inicial (1-15): "))
@@ -194,6 +228,7 @@ class Comesolo:
         juego.imprimir_tablero()
 
         while True:
+            juego.realizar_movimiento_ia()
             juego.imprimir_tablero()
             movimientos_validos = juego.obtener_movimientos_validos()
             if not movimientos_validos:

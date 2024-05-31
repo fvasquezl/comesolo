@@ -1,147 +1,18 @@
+import os
 from termcolor import colored
 import torch
 import torch.nn as nn
 import torch.optim as optim
-
-import csv
-
 import random
-
-
-class ComeSoloNet(nn.Module):
-    def __init__(self):
-        super(ComeSoloNet, self).__init__()
-        self.fc1 = nn.Linear(15, 64)  # Entrada de 5x5 (tamaño del tablero)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 15)  # Salida de 15 movimientos posibles
-
-    def forward(self, x):
-        x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = self.fc3(x)
-        return x
-
-
-# Función para predecir el mejor movimiento
-def predecir_movimiento(tablero, epsilon=0.1):
-    # Preprocesar el tablero a formato de tensor
-    tablero_tensor = torch.FloatTensor(tablero).view(1, 15)
-
-    # Cargar la red neuronal entrenada
-    modelo = ComeSoloNet()
-    modelo.load_state_dict(torch.load("modelo_entrenado.pth"))
-    modelo.eval()  # Poner el modelo en modo de evaluación
-
-    # Hacer la predicción
-    with torch.no_grad():
-        salida = modelo(tablero_tensor)
-        mejor_movimiento = torch.argmax(salida).item()
-        # Obtener el índice del movimiento más probable
-
-    # # Exploración Epsilon-Greedy
-    # if random.random() < epsilon:
-    #     # Exploración: seleccionar un movimiento aleatorio
-    #     mejor_movimiento = random.randint(0, 14)
-    # else:
-    #     # Explotación: seleccionar el mejor movimiento predicho
-    #     mejor_movimiento = mejor_movimiento_predicho
-
-    # Encuentra el origen y el destino del movimiento
-    origen, destino = buscar_origen_destino(mejor_movimiento)
-    tablero_tensor = juego.tablero
-
-    return origen, destino
-
-
-def buscar_origen_destino(movimiento):
-    # Encuentra el origen y el destino del movimiento
-    for origen in range(1, 16):
-        for destino in range(1, 16):
-            if juego.movimiento_valido(destino, origen) and destino == movimiento:
-                return origen, destino
-    return 0, 0
-
-
-def entrenar_modelo(
-    num_datos=10000, num_epochs=100, lr=0.01, ruta_guardado="modelo_entrenado.pth"
-):
-    # Generar los datos de entrenamiento
-    X_train = []
-    y_train = []
-    movimiento_inicial = 0
-    for _ in range(num_datos):
-        juego = Comesolo()
-        juego.ini_tablero()
-        if movimiento_inicial > 15:
-            movimiento_inicial = 0
-        movimiento_inicial += 1
-        juego.primer_movimiento(movimiento_inicial)
-        tablero_inicial = juego.tablero.copy()
-        # juego.imprimir_tablero()
-        movimientos = []
-        while True:
-            movimientos_validos = juego.obtener_movimientos_validos()
-            if not movimientos_validos:
-                break
-            origen, destino = random.choice(movimientos_validos)
-            movimientos.append(origen)
-            juego.realizar_movimiento(origen, destino)
-
-        if sum(juego.tablero) != 1:
-            continue
-        if movimientos in y_train:
-            continue
-
-        print(tablero_inicial)
-        juego.imprimir_tablero()
-        print(movimientos)
-        X_train.append(tablero_inicial)
-
-        y_train.extend([movimiento for movimiento in movimientos])  # Corrección
-        # print(X_train)
-        # print(y_train)
-
-    # with open("tablero.txt", "w") as f:
-    #     csv.writer(f, delimiter=",").writerows(X_train)
-
-    # with open("movimiento.txt", "w") as f:
-    #     csv.writer(f, delimiter=",").writerows(y_train)
-
-    # Convertir los datos de entrenamiento a tensores
-    # X_train = [torch.FloatTensor(x) for x in X_train]
-    # y_train = torch.LongTensor(y_train)  # Ajustar índices de movimientos
-    X_train = torch.FloatTensor(X_train)
-    y_train = torch.LongTensor(y_train)
-
-    # Instanciar la red, la función de pérdida y el optimizador
-    modelo = ComeSoloNet()
-    criterio = nn.CrossEntropyLoss()
-    optimizador = optim.SGD(modelo.parameters(), lr=lr)
-
-    # Bucle de entrenamiento
-    for epoch in range(num_epochs):
-        for i, (X_batch, y_batch) in enumerate(zip(X_train, y_train)):
-            # Hacer una pasada hacia adelante
-            salidas = modelo(X_batch)
-            perdida = criterio(salidas, y_batch)
-
-            # Retropropagación y optimización
-            optimizador.zero_grad()
-            perdida.backward()
-            optimizador.step()
-
-            # Imprimir la pérdida cada cierto número de épocas
-            if epoch % 10 == 0 and i == 0:
-                print(f"Época {epoch}, pérdida: {perdida.item()}")
-
-    # Guardar los pesos entrenados
-    torch.save(modelo.state_dict(), ruta_guardado)
+import time
 
 
 class Comesolo:
     def __init__(self):
         self.tablero = self.ini_tablero()
         self.estado = 0
+        self.movimiento_inicial = 0
+        self.movimientos = []
 
     def inc_estado(self):
         self.estado += 1
@@ -229,32 +100,46 @@ class Comesolo:
                     movimientos_validos.append((origen, destino))
         return movimientos_validos
 
-    def realizar_movimiento_ia(self):
-        tablero_actual = self.tablero.copy()  # Obtener una copia del tablero actual
-        # mejor_movimiento = predecir_movimiento(tablero_actual)
-        # print(mejor_movimiento)
-        # self.realizar_movimiento(mejor_movimiento)
-        origen, destino = predecir_movimiento(tablero_actual)
-        self.realizar_movimiento(origen, destino)
+    def imprimir_solucion(self):
+        juego.ini_tablero()
+        juego.primer_movimiento(self.movimiento_inicial)
+        for movimiento in self.movimientos:
+            juego.imprimir_tablero()
+            time.sleep(1)
+            origen, destino = movimiento
+            juego.realizar_movimiento(origen, destino)
+            juego.imprimir_tablero()
 
     def jugar(self):
         juego.ini_tablero()
-        movimiento_inicial = int(input("Ingrese su movimiento inicial (1-15): "))
-        juego.primer_movimiento(movimiento_inicial)
-        juego.imprimir_tablero()
-
+        self.movimiento_inicial = int(input("Ingrese su movimiento inicial (1-15): "))
+        juego.primer_movimiento(self.movimiento_inicial)
+        print("Pensando ... :)")
         while True:
-            juego.realizar_movimiento_ia()
-            juego.imprimir_tablero()
+            # juego.imprimir_tablero()
+            bytes_aleatorios = os.urandom(8)
+            # Convertir los bytes aleatorios a un número entero y utilizarlo como semilla
+            semilla = int.from_bytes(bytes_aleatorios, byteorder="big")
+            random.seed(semilla)
+
+            # juego.imprimir_tablero()
             movimientos_validos = juego.obtener_movimientos_validos()
             if not movimientos_validos:
-                break
+                if sum(juego.tablero) == 1:
+                    break
+                else:
+                    juego.movimientos = []
+                    juego.ini_tablero()
+                    juego.primer_movimiento(self.movimiento_inicial)
+            else:
+                origen, destino = random.choice(movimientos_validos)
+                juego.realizar_movimiento(origen, destino)
+                self.movimientos.append((origen, destino))
 
-        print("Juego terminado.")
+        juego.imprimir_solucion()
 
 
 if __name__ == "__main__":
-    entrenar_modelo()
 
     # Jugar el juego
     juego = Comesolo()

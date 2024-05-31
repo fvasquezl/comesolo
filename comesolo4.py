@@ -35,19 +35,20 @@ def predecir_movimiento(tablero, epsilon=0.1):
     # Hacer la predicción
     with torch.no_grad():
         salida = modelo(tablero_tensor)
-        mejor_movimiento_predicho = torch.argmax(salida).item()
+        mejor_movimiento = torch.argmax(salida).item()
         # Obtener el índice del movimiento más probable
 
-    # Exploración Epsilon-Greedy
-    if random.random() < epsilon:
-        # Exploración: seleccionar un movimiento aleatorio
-        mejor_movimiento = random.randint(0, 14)
-    else:
-        # Explotación: seleccionar el mejor movimiento predicho
-        mejor_movimiento = mejor_movimiento_predicho
+    # # Exploración Epsilon-Greedy
+    # if random.random() < epsilon:
+    #     # Exploración: seleccionar un movimiento aleatorio
+    #     mejor_movimiento = random.randint(0, 14)
+    # else:
+    #     # Explotación: seleccionar el mejor movimiento predicho
+    #     mejor_movimiento = mejor_movimiento_predicho
 
     # Encuentra el origen y el destino del movimiento
     origen, destino = buscar_origen_destino(mejor_movimiento)
+    tablero_tensor = juego.tablero
 
     return origen, destino
 
@@ -67,12 +68,16 @@ def entrenar_modelo(
     # Generar los datos de entrenamiento
     X_train = []
     y_train = []
+    movimiento_inicial = 0
     for _ in range(num_datos):
         juego = Comesolo()
         juego.ini_tablero()
-        movimiento_inicial = random.randint(1, 15)
+        if movimiento_inicial > 15:
+            movimiento_inicial = 0
+        movimiento_inicial += 1
         juego.primer_movimiento(movimiento_inicial)
         tablero_inicial = juego.tablero.copy()
+        # juego.imprimir_tablero()
         movimientos = []
         while True:
             movimientos_validos = juego.obtener_movimientos_validos()
@@ -82,9 +87,19 @@ def entrenar_modelo(
             movimientos.append(origen)
             juego.realizar_movimiento(origen, destino)
 
+        if sum(juego.tablero) != 1:
+            continue
+        if movimientos in y_train:
+            continue
+
+        print(tablero_inicial)
+        juego.imprimir_tablero()
+        print(movimientos)
         X_train.append(tablero_inicial)
 
-        y_train.extend([movimiento - 1 for movimiento in movimientos])  # Corrección
+        y_train.extend([movimiento for movimiento in movimientos])  # Corrección
+        # print(X_train)
+        # print(y_train)
 
     # with open("tablero.txt", "w") as f:
     #     csv.writer(f, delimiter=",").writerows(X_train)
@@ -194,7 +209,7 @@ class Comesolo:
         return False
 
     def realizar_movimiento(self, origen, destino) -> None:
-        print(origen, destino)
+        # print(origen, destino)
         if not self.movimiento_valido(destino, origen):
             print("Movimiento fuera de rango")
             return

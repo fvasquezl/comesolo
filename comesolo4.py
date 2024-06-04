@@ -62,7 +62,7 @@ class Comesolo:
                 3: [8, 10],
                 4: [1, 6, 11, 13],
                 5: [12, 14],
-                6: [1, 4.13, 15],
+                6: [1, 4, 13, 15],
                 7: [2, 9],
                 8: [3, 10],
                 9: [2, 7],
@@ -101,6 +101,8 @@ class Comesolo:
         return movimientos_validos
 
     def imprimir_solucion(self):
+        print("Solucion encontrada ...😎")
+        time.sleep(3)
         juego.ini_tablero()
         juego.primer_movimiento(self.movimiento_inicial)
         for movimiento in self.movimientos:
@@ -112,9 +114,10 @@ class Comesolo:
 
     def jugar(self):
         juego.ini_tablero()
+        juego.imprimir_tablero()
         self.movimiento_inicial = int(input("Ingrese su movimiento inicial (1-15): "))
         juego.primer_movimiento(self.movimiento_inicial)
-        print("Pensando ... :)")
+        print("Pensando ... 🤔")
         while True:
             # juego.imprimir_tablero()
             bytes_aleatorios = os.urandom(8)
@@ -137,6 +140,7 @@ class Comesolo:
                 self.movimientos.append((origen, destino))
 
         juego.imprimir_solucion()
+        print("listo 😏")
 
 
 if __name__ == "__main__":

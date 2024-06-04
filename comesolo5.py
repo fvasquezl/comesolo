@@ -5,6 +5,9 @@ import torch.nn as nn
 import torch.optim as optim
 import random
 import time
+import csv
+
+filename = "arrays.csv"
 
 
 class Comesolo:
@@ -112,35 +115,49 @@ class Comesolo:
             self.realizar_movimiento(origen, destino)
             self.imprimir_tablero()
 
+    def guardar_csv(self, diccionario):
+        with open(filename, "w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(["primer_mov", "movimientos"])
+
+            for clave, valor in diccionario.items():
+                linea = [clave]
+                linea.extend(valor)  # Agrega las tuplas a la línea como una lista plana
+                writer.writerow(linea)  # Escribe la línea completa en el archivo
+
     def jugar(self):
-        self.ini_tablero()
-        self.imprimir_tablero()
-        self.movimiento_inicial = int(input("Ingrese su movimiento inicial (1-15): "))
-        self.primer_movimiento(self.movimiento_inicial)
-        print("Pensando ... 🤔")
-        while True:
-            # self.imprimir_tablero()
-            bytes_aleatorios = os.urandom(8)
-            # Convertir los bytes aleatorios a un número entero y utilizarlo como semilla
-            semilla = int.from_bytes(bytes_aleatorios, byteorder="big")
-            random.seed(semilla)
 
-            # self.imprimir_tablero()
-            movimientos_validos = self.obtener_movimientos_validos()
-            if not movimientos_validos:
-                if sum(self.tablero) == 1:
-                    break
-                else:
-                    self.movimientos = []
-                    self.ini_tablero()
-                    self.primer_movimiento(self.movimiento_inicial)
-            else:
-                origen, destino = random.choice(movimientos_validos)
-                self.realizar_movimiento(origen, destino)
-                self.movimientos.append((origen, destino))
+        for i in range(1, 10):
+            for j in range(1000):
+                self.ini_tablero()
+                # self.imprimir_tablero()
+                self.movimiento_inicial = i
+                self.primer_movimiento(self.movimiento_inicial)
+                # print("Pensando ... 🤔")
+                while True:
+                    # self.imprimir_tablero()
+                    bytes_aleatorios = os.urandom(8)
+                    # Convertir los bytes aleatorios a un número entero y utilizarlo como semilla
+                    semilla = int.from_bytes(bytes_aleatorios, byteorder="big")
+                    random.seed(semilla)
 
-        self.imprimir_solucion()
-        print("listo 😏")
+                    # self.imprimir_tablero()
+                    movimientos_validos = self.obtener_movimientos_validos()
+                    if not movimientos_validos:
+                        if sum(self.tablero) == 1:
+                            break
+                        else:
+                            self.movimientos = []
+                            self.ini_tablero()
+                            self.primer_movimiento(self.movimiento_inicial)
+                    else:
+                        origen, destino = random.choice(movimientos_validos)
+                        self.realizar_movimiento(origen, destino)
+                        self.movimientos.append((origen, destino))
+
+                print(self.movimientos)
+                self.guardar_csv({i: self.movimientos})
+                # print("listo 😏")
 
 
 if __name__ == "__main__":
